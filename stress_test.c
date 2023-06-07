@@ -59,9 +59,9 @@ int main() {
 			}
 		
 			world_apply_gravity(&world, 9.8);
-			int end_ms = SDL_GetTicks();
-			printf("%d Objects, %d ms\n", world.size, end_ms-start_ms);
 		}
+		int end_ms = SDL_GetTicks();
+		printf("%d Objects, %d ms\n", world.size, end_ms-start_ms);
 
 		tick++;
 		if (tick % SPAWN_DELAY == 0) {
