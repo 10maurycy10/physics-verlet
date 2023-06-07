@@ -4,7 +4,6 @@
 It has to be compiled with `-lm` under gcc.
 <!--[Explanation of the code on GitHub pages](http://10maurycy10.github.io/tutorials/a_super_simple_physics_engine/)-->
 
-<<<<<<< HEAD
 This repository also includes a few simulations with a basic UI and renderer.
 
 - `rope.c` Simulates rope made out of descrete particles attached together using constrants.
