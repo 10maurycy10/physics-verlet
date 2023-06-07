@@ -107,6 +107,7 @@ int world_insert_object(World* world, Body object) {
 	if (world->capacity > world->size) {
 		world->objects[world->size] = object;
 		world->size++;
+		return 1;
 	} else {
 		return 0;
 	}
