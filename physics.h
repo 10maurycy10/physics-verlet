@@ -217,3 +217,11 @@ void constrain_distance_between_objects(World* w, int idx1, int idx2, float maxd
 		*object2 = vector_add(*object2, adjustment);
 	}
 }
+
+void constrain_bounding_box(World* w, int idx, float minx, float maxx, float miny, float maxy) {
+	Vector2* object = &w->objects[idx].position;
+	if (object->x > maxx) object->x = maxx;
+	if (object->y > maxy) object->y = maxy;
+	if (object->x < minx) object->x = minx;
+	if (object->y < miny) object->y = miny;
+}
