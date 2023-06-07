@@ -5,16 +5,16 @@
 #include <SDL2/SDL.h>
 
 #include "shape.h"
-#include "physics.h"
+#include "physics_optimized.h"
 
 #define SCREEN_WIDTH 1500
 #define SCREEN_HEIGHT 1200
 #define PIXELS_PER_UNIT 29
 
-#define TIMESTEP (1.0/60)
+#define TIMESTEP (1.0/60/2)
 #define SPAWN_DELAY 4
 #define SPAWN_Y 10
-#define MAX_COUNT 1000
+#define MAX_COUNT 5000
 
 /////////////////////////////
 // The main function       //
@@ -40,6 +40,7 @@ int main() {
 	}
 
 	// Setup physics engine
+	AccessGrid grid = new_access_grid(42, 42, -21, -21, 1);
 	World world = world_with_capacity(MAX_COUNT);
 
 	float dt = TIMESTEP;
@@ -48,25 +49,27 @@ int main() {
 	// Run simulation
 	while (1) {
 		int start_ms = SDL_GetTicks();
-		world_update_positions(&world, dt);
+		for (int i = 0; i < 2; i++) {
+			world_update_positions(&world, dt);
 		
-		world_collide(&world);
+			world_optimized_collide(&world, &grid);
 		
-		for (int i = 0; i < world.size; i++) {
-			constrain_bounding_box(&world, i, -20, 20, -20, 20);
+			for (int i = 0; i < world.size; i++) {
+				constrain_bounding_box(&world, i, -20, 20, -20, 20);
+			}
+		
+			world_apply_gravity(&world, 9.8);
+			int end_ms = SDL_GetTicks();
+			printf("%d Objects, %d ms\n", world.size, end_ms-start_ms);
 		}
-		
-		world_apply_gravity(&world, 9.8);
-		int end_ms = SDL_GetTicks();
-		printf("%d Objects, %d ms\n", world.size, end_ms-start_ms);
 
 		tick++;
 		if (tick % SPAWN_DELAY == 0) {
-			Body object = physics_new_with_position(1, SPAWN_Y, 0.4);
+			Body object = physics_new_with_position(1, SPAWN_Y, 0.3);
 			object.position.x -= 0.2;
 			object.position.y -= 0.2;
 			world_insert_object(&world, object);
-			object = physics_new_with_position(-1, SPAWN_Y, 0.4);
+			object = physics_new_with_position(-1, SPAWN_Y, 0.3);
 			object.position.x -= 0.2;
 			object.position.y -= 0.2;
 			world_insert_object(&world, object);
@@ -104,5 +107,6 @@ int main() {
 	}
 	
 
+	free_access_grid(&grid);
 	world_cleanup(&world);
 }
