@@ -131,39 +131,19 @@ void world_optimized_collide(World* w, AccessGrid* grid) {
 			}
 		}
 	}
-	
-	// For every cell in the grid
-	for (int x = 0; x < grid->x_size; x++) {
-		for (int y = 0; y < grid->y_size; y++) {
-			// For every object in that cell
-			int* indecies = access_grid_get(grid, x, y);
-			int length = grid->object_list_length[x][y];
-			for (int i = 0; i < length; i++) {
-				// I spent sooo long debuging this one line error.
-				// insead of looking up the loop index in the grid and then the world, it
-				// looked it up in the world directly, leading to the wrong grid cordinates
-				// getting computed, resulting in missed collisions.
-				// I have left the old version here for achival perposes.
-				// Unfortunatly, I cant add assertions becuase particles can get moved around during solving.
-//				Vector2 location = w->objects[i].position;
-				Vector2 location = w->objects[indecies[i]].position;
-				float radius = w->objects[indecies[i]].radius;
-		
-				int grid_x_start = 	((int)(location.x - radius - grid->start_x)/grid->cellsize);
-				int grid_x_end = 	((int)(location.x + radius - grid->start_x)/grid->cellsize);
-				int grid_y_start = 	((int)(location.y - radius - grid->start_y)/grid->cellsize);
-				int grid_y_end = 	((int)(location.y + radius - grid->start_y)/grid->cellsize);
 
-//				assert(x >= grid_x_start);
-//				assert(x <= grid_x_end);
-//				assert(y >= grid_y_start);
-//				assert(y <= grid_y_end);
-				
-				for (int check_x = grid_x_start; check_x <= grid_x_end; check_x++) {
-					for (int check_y = grid_y_start; check_y <= grid_y_end; check_y++) {
-						collide_with_cell(w, grid, check_x, check_y, indecies[i]);
-					}
-				}
+	for (int i = 0; i < w->size; i++) {	
+		Vector2 location = w->objects[i].position;
+		float radius = w->objects[i].radius;
+	
+		int grid_x_start = 	((int)(location.x - radius - grid->start_x)/grid->cellsize);
+		int grid_x_end = 	((int)(location.x + radius - grid->start_x)/grid->cellsize);
+		int grid_y_start = 	((int)(location.y - radius - grid->start_y)/grid->cellsize);
+		int grid_y_end = 	((int)(location.y + radius - grid->start_y)/grid->cellsize);
+
+		for (int check_x = grid_x_start; check_x <= grid_x_end; check_x++) {
+			for (int check_y = grid_y_start; check_y <= grid_y_end; check_y++) {
+				collide_with_cell(w, grid, check_x, check_y, i);
 			}
 		}
 	}
@@ -184,22 +164,18 @@ void world_optimized_collide_unsafe(World* w, AccessGrid* grid) {
 	}
 	
 	// For every cell in the grid
-	for (int x = 0; x < grid->x_size; x++) {
-		for (int y = 0; y < grid->y_size; y++) {
-			// For every object in that cell
-			int* indecies = access_grid_get(grid, x, y);
-			int length = grid->object_list_length[x][y];
-			for (int i = 0; i < length; i++) {
-				collide_with_cell(w, grid, x - 1, y - 1, indecies[i]);
-				collide_with_cell(w, grid, x - 1, y, indecies[i]);
-				collide_with_cell(w, grid, x - 1, y + 1, indecies[i]);
-				collide_with_cell(w, grid, x, y - 1, indecies[i]);
-				collide_with_cell(w, grid, x, y, indecies[i]);
-				collide_with_cell(w, grid, x, y + 1, indecies[i]);
-				collide_with_cell(w, grid, x + 1, y - 1, indecies[i]);
-				collide_with_cell(w, grid, x + 1, y, indecies[i]);
-				collide_with_cell(w, grid, x + 1, y + 1, indecies[i]);
-			}
-		}
+	for (int i = 0; i < w->size; i++) {	
+		Vector2 location = w->objects[i].position;
+		int x = (location.x - grid->start_x)/grid->cellsize;
+		int y = (location.y - grid->start_y)/grid->cellsize;
+		collide_with_cell(w, grid, x - 1, y - 1, i);
+		collide_with_cell(w, grid, x - 1, y, i);
+		collide_with_cell(w, grid, x - 1, y + 1, i);
+		collide_with_cell(w, grid, x, y - 1, i);
+		collide_with_cell(w, grid, x, y, i);
+		collide_with_cell(w, grid, x, y + 1, i);
+		collide_with_cell(w, grid, x + 1, y - 1, i);
+		collide_with_cell(w, grid, x + 1, y, i);
+		collide_with_cell(w, grid, x + 1, y + 1, i);
 	}
 }
