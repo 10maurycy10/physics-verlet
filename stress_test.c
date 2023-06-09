@@ -14,7 +14,7 @@
 #define TIMESTEP (1.0/60/2)
 #define SPAWN_DELAY 4
 #define SPAWN_Y 10
-#define MAX_COUNT 5000
+#define MAX_COUNT 10000
 
 /////////////////////////////
 // The main function       //
@@ -65,11 +65,11 @@ int main() {
 
 		tick++;
 		if (tick % SPAWN_DELAY == 0) {
-			Body object = physics_new_with_position(1, SPAWN_Y, 0.3);
+			Body object = physics_new_with_position(1, SPAWN_Y, 0.1);
 			object.position.x -= 0.2;
 			object.position.y -= 0.2;
 			world_insert_object(&world, object);
-			object = physics_new_with_position(-1, SPAWN_Y, 0.3);
+			object = physics_new_with_position(-1, SPAWN_Y, 0.1);
 			object.position.x -= 0.2;
 			object.position.y -= 0.2;
 			world_insert_object(&world, object);

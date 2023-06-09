@@ -1,4 +1,5 @@
 #include "physics.h"
+#include <assert.h>
 
 /////////////////
 // Access Grid //
@@ -8,6 +9,7 @@
 
 // A datastructure used to optimize collision detection
 // This works by breaking up space into a array of grid cells, binning all objects into a cell, to be able to quickly find nearby objects.
+// Basicly, this is a database allowing fast lookup of particles in a location
 typedef struct AccessGrid {
 	float start_x;
 	float start_y;
@@ -19,6 +21,9 @@ typedef struct AccessGrid {
 	int** object_list;
 } AccessGrid;
 
+// x and y are the size, this should be the total width and height of the area objects are allowed to enter devided by the cellsize. 
+// start_x and start_y are the minimum x and y cordinates in that area
+// cellsize is how granular the grid should be, smaller values have a higher memory footprint. For performace aim for a value ~4 time the radius.
 AccessGrid new_access_grid(int x, int y, float start_x, float start_y, float cellsize) {
 	AccessGrid grid = {
 		.cellsize = cellsize,
@@ -58,8 +63,10 @@ void access_grid_clear(AccessGrid* grid) {
 }
 
 void access_grid_append(AccessGrid* grid, int x, int y, int idx) {	
-	int position = grid->object_list_length[x][y]++;
-	access_grid_get(grid, x, y)[position] = idx;
+	if (grid->object_list_length[x][y] < MAX_PARTICLES_IN_CELL) {
+		int position = grid->object_list_length[x][y]++;
+		access_grid_get(grid, x, y)[position] = idx;
+	} 
 }
 
 ////////////////////
@@ -67,7 +74,10 @@ void access_grid_append(AccessGrid* grid, int x, int y, int idx) {
 ////////////////////
 
 void physics_single_check(World* w, int idx1, int idx2) {
+	// Avoid checking a cell against itself
 	if (idx1 == idx2) return;
+	// Avoid duplicate checks
+	if (idx1 < idx2) return;
 	float mindistance = w->objects[idx1].radius + w->objects[idx2].radius;
 
 	Vector2* object1 = &w->objects[idx1].position;
@@ -98,8 +108,69 @@ void collide_with_cell(World* w, AccessGrid* grid, int x, int y, int idx) {
 
 // An optiminzed collision solver
 // max_x, min_x, max_y, min_y are the dimentrions for any particles
-// Cell size should be the largest radius in the simulation
+// Cell size should be the twice largest radius in the simulation, but violating this will no longer break things.
 void world_optimized_collide(World* w, AccessGrid* grid) {
+	// Populate the access grid with all the particles
+
+	access_grid_clear(grid);
+	
+	for (int i = 0; i < w->size; i++) {
+		Vector2 location = w->objects[i].position;
+		float radius = w->objects[i].radius;
+		
+		int grid_x_start = 	((int)(location.x - radius - grid->start_x)/grid->cellsize);
+		int grid_x_end = 	((int)(location.x + radius - grid->start_x)/grid->cellsize);
+		int grid_y_start = 	((int)(location.y - radius - grid->start_y)/grid->cellsize);
+		int grid_y_end = 	((int)(location.y + radius - grid->start_y)/grid->cellsize);
+	
+		for (int cellx = grid_x_start; cellx <= grid_x_end; cellx++) {
+			for (int celly = grid_y_start; celly <= grid_y_end; celly++) {
+				if (cellx >= 0 && cellx < grid->x_size && celly >= 0 && celly < grid->y_size ) {
+					access_grid_append(grid, cellx, celly, i);
+				}
+			}
+		}
+	}
+	
+	// For every cell in the grid
+	for (int x = 0; x < grid->x_size; x++) {
+		for (int y = 0; y < grid->y_size; y++) {
+			// For every object in that cell
+			int* indecies = access_grid_get(grid, x, y);
+			int length = grid->object_list_length[x][y];
+			for (int i = 0; i < length; i++) {
+				// I spent sooo long debuging this one line error.
+				// insead of looking up the loop index in the grid and then the world, it
+				// looked it up in the world directly, leading to the wrong grid cordinates
+				// getting computed, resulting in missed collisions.
+				// I have left the old version here for achival perposes.
+				// Unfortunatly, I cant add assertions becuase particles can get moved around during solving.
+//				Vector2 location = w->objects[i].position;
+				Vector2 location = w->objects[indecies[i]].position;
+				float radius = w->objects[indecies[i]].radius;
+		
+				int grid_x_start = 	((int)(location.x - radius - grid->start_x)/grid->cellsize);
+				int grid_x_end = 	((int)(location.x + radius - grid->start_x)/grid->cellsize);
+				int grid_y_start = 	((int)(location.y - radius - grid->start_y)/grid->cellsize);
+				int grid_y_end = 	((int)(location.y + radius - grid->start_y)/grid->cellsize);
+
+//				assert(x >= grid_x_start);
+//				assert(x <= grid_x_end);
+//				assert(y >= grid_y_start);
+//				assert(y <= grid_y_end);
+				
+				for (int check_x = grid_x_start; check_x <= grid_x_end; check_x++) {
+					for (int check_y = grid_y_start; check_y <= grid_y_end; check_y++) {
+						collide_with_cell(w, grid, check_x, check_y, indecies[i]);
+					}
+				}
+			}
+		}
+	}
+}
+
+// This is 30% faster than the other version, but will break if a particle is larger than half the cell size
+void world_optimized_collide_unsafe(World* w, AccessGrid* grid) {
 	// Populate the access grid with all the particles
 
 	access_grid_clear(grid);
