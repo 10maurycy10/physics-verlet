@@ -149,33 +149,3 @@ void world_optimized_collide(World* w, AccessGrid* grid) {
 	}
 }
 
-// This is 30% faster than the other version, but will break if a particle is larger than half the cell size
-void world_optimized_collide_unsafe(World* w, AccessGrid* grid) {
-	// Populate the access grid with all the particles
-
-	access_grid_clear(grid);
-
-	for (int i = 0; i < w->size; i++) {
-		Vector2 location = w->objects[i].position;
-		int cellx = ((location.x - grid->start_x)/grid->cellsize);
-		int celly = ((location.y - grid->start_y)/grid->cellsize);
-		if (cellx >= 0 && cellx < grid->x_size && celly >= 0 && celly < grid->y_size )
-			access_grid_append(grid, cellx, celly, i);
-	}
-	
-	// For every cell in the grid
-	for (int i = 0; i < w->size; i++) {	
-		Vector2 location = w->objects[i].position;
-		int x = (location.x - grid->start_x)/grid->cellsize;
-		int y = (location.y - grid->start_y)/grid->cellsize;
-		collide_with_cell(w, grid, x - 1, y - 1, i);
-		collide_with_cell(w, grid, x - 1, y, i);
-		collide_with_cell(w, grid, x - 1, y + 1, i);
-		collide_with_cell(w, grid, x, y - 1, i);
-		collide_with_cell(w, grid, x, y, i);
-		collide_with_cell(w, grid, x, y + 1, i);
-		collide_with_cell(w, grid, x + 1, y - 1, i);
-		collide_with_cell(w, grid, x + 1, y, i);
-		collide_with_cell(w, grid, x + 1, y + 1, i);
-	}
-}
