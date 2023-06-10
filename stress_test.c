@@ -45,6 +45,7 @@ int main() {
 
 	float dt = TIMESTEP;
 	int tick = 0;
+	int last_realtime_count = 0;
 	
 	// Run simulation
 	while (1) {
@@ -63,8 +64,11 @@ int main() {
 		}
 		int end_ms = SDL_GetTicks();
 		printf("%d Objects, %d simulation ms\n", world.size, end_ms-start_ms);
-		if(end_ms - start_ms > 16)
-			printf("Not realtime!\n");
+		if(end_ms - start_ms > 16) {
+			printf("Not realtime! Last realtime object count: %d\n", last_realtime_count);
+		} else {
+			last_realtime_count = world.size;
+		}
 
 		if (tick % SPAWN_DELAY == 0) {
 			for (float x = -15; x < 15; x++) {
