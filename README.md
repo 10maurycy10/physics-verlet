@@ -6,6 +6,8 @@ It has to be compiled with `-lm` under gcc.
 
 This repository also includes a few simulations with a basic UI and renderer.
 
+- `stress-test.c` fills a box with objects to test optimizations of the engine.
+
 - `rope.c` Simulates rope made out of descrete particles attached together using constrants.
 
 - `bowl.c` Simulates a bunch of circles bounded inside of a radius around the origin. 
