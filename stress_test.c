@@ -9,12 +9,12 @@
 
 #define SCREEN_WIDTH 1500
 #define SCREEN_HEIGHT 1200
-#define PIXELS_PER_UNIT 29
+#define PIXELS_PER_UNIT 25
 
-#define TIMESTEP (1.0/60/2)
-#define SPAWN_DELAY 4
-#define SPAWN_Y 10
-#define MAX_COUNT 10000
+#define TIMESTEP (1.0/60/3)
+#define SPAWN_DELAY 2
+#define SPAWN_Y 19
+#define MAX_COUNT 20000
 
 /////////////////////////////
 // The main function       //
@@ -40,7 +40,7 @@ int main() {
 	}
 
 	// Setup physics engine
-	AccessGrid grid = new_access_grid(42, 42, -21, -21, 1);
+	AccessGrid grid = new_access_grid(42*4, 42*4, -21, -21, 0.25);
 	World world = world_with_capacity(MAX_COUNT);
 
 	float dt = TIMESTEP;
@@ -49,10 +49,11 @@ int main() {
 	// Run simulation
 	while (1) {
 		int start_ms = SDL_GetTicks();
-		for (int i = 0; i < 2; i++) {
+		for (int i = 0; i <3; i++) {
 			world_update_positions(&world, dt);
-		
 			world_optimized_collide(&world, &grid);
+			world_optimized_collide(&world, &grid);
+//			world_collide(&world);
 		
 			for (int i = 0; i < world.size; i++) {
 				constrain_bounding_box(&world, i, -20, 20, -20, 20);
@@ -61,19 +62,19 @@ int main() {
 			world_apply_gravity(&world, 9.8);
 		}
 		int end_ms = SDL_GetTicks();
-		printf("%d Objects, %d ms\n", world.size, end_ms-start_ms);
+		printf("%d Objects, %d simulation ms\n", world.size, end_ms-start_ms);
+		if(end_ms - start_ms > 16)
+			printf("Not realtime!\n");
 
-		tick++;
 		if (tick % SPAWN_DELAY == 0) {
-			Body object = physics_new_with_position(1, SPAWN_Y, 0.1);
-			object.position.x -= 0.2;
-			object.position.y -= 0.2;
-			world_insert_object(&world, object);
-			object = physics_new_with_position(-1, SPAWN_Y, 0.1);
-			object.position.x -= 0.2;
-			object.position.y -= 0.2;
-			world_insert_object(&world, object);
+			for (float x = -15; x < 15; x++) {
+				Body object = physics_new_with_position(x, SPAWN_Y, 0.1);
+				object.position.x -= 0.04;
+				object.position.y -= 0.04;
+				world_insert_object(&world, object);
+			}
 		}
+		tick++;
 
 		// Check for input
 		SDL_Event event;
@@ -102,7 +103,7 @@ int main() {
 			draw_circle(renderer, x, y, r);
 			
 		}
-
+		
 		SDL_RenderPresent(renderer);
 	}
 	
