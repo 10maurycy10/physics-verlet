@@ -1,8 +1,20 @@
-// A simple, single file Verlet integration based physics engine.
+// A simple, single file 2d Verlet integration based physics engine.
 //
-// Create a world with world_with_capacity, add objects with world_spawn and simulate by calling world_step, world_collide and apply_gravity.
-// Add constraints by calling the constrain_* functions on every frame.
-// If there are problems with rigitiy, place every constraint and the world_collide function inside a loop to call them more than one time per frame.
+// To use it, first initalize the World struct using the world_with_capacity, add objects using world_spawn
+//
+// To simulate it call world_step every timestep.
+// To add gravity call apply_gravity every timestep and pass the acceleration due to gravity.
+// Constraints are applied by calling the constriant function every frame. The most important one is world_collide,
+// which implements a simple non-intersection constraint, assuming every object has equal mass and collisions are
+// inelastic.
+// 
+// There is nothing special about the constraint_* and world_collide functions, you can get the same effect by simple manipulating object's .position property.
+//
+// If constraints are not a rigid as they should be, or collisions start becoming unstable, try running the constraints multiple times per timestep, or/and reducing the timestep.
+
+
+#ifndef HAS_PHYSICS
+#define HAS_PHYSICS 1
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -13,40 +25,45 @@
 // low level math functions. //
 ///////////////////////////////
 
+// A 2d Vector type
 typedef struct Vector2 {
 	float x;
 	float y;
 } Vector2;
 
+// Vector addition
 Vector2 vector_add(Vector2 v1, Vector2 v2) {
 	Vector2 output = {.x = v1.x + v2.x, .y = v1.y + v2.y};
 	return output;
 }
 
+// Vector subtraction
 Vector2 vector_sub(Vector2 v1, Vector2 v2) {
 	Vector2 output = {.x = v1.x - v2.x, .y = v1.y - v2.y};
 	return output;
 }
 
+// Scale a vector by a value.
 Vector2 vector_mul_scaler(Vector2 v1, float s) {
 	Vector2 output = {.x = v1.x * s, .y = v1.y * s};
 	return output;
 }
 
+// Compute the magnitude of a vector
 float vector_length(Vector2 v1) {
 	return sqrt(v1.x * v1.x + v1.y * v1.y);
 }
 
 
 ////////////////////////////////////////////////////////////////////////////////////////
-// Object for verlet inegration.                                                      //
+// Object for Verlet inegration.                                                      //
 // Velocity is not stored and is extrapolated based on the current and past positions //
 // This means that you dont have to update the velocity when messing with the position//
 // This means that the timestep must stay constant for the whole simulation           //
 ////////////////////////////////////////////////////////////////////////////////////////
 
 // A body is a circle centered on position with given radius
-// The accleration vector is used to sum up forces, just add to it every frame to apply a force.
+// The accleration vector is used to sum up the effects of forces, just add to it every frame to apply a force.
 // The possition can be adjusted manualy, but this will add velocity. Adjust both the old and current possition to avoid this.
 typedef struct Body {
 	float radius;
@@ -57,6 +74,7 @@ typedef struct Body {
 } Body;
 
 // Use Verlet integration to apply velocity and acceleration to the body.
+// This is the core of the physics simulation, and should be called every timestep.
 void physics_update_position(Body* body, float dt) {
 	// Compute velocity in terms of timestep based on position
 	Vector2 velocity = vector_sub(body->position, body->position_old);
@@ -69,7 +87,7 @@ void physics_update_position(Body* body, float dt) {
 	body->acceleration.y = 0;
 }
 
-// Create a new body at a given possition, with 0 acceleration and 0 velocity.
+// Convenece function to create a new body at a given possition, with 0 acceleration and 0 velocity.
 Body physics_new_with_position(float x, float y, float r) {
 	Body b = {
 		.radius = r,
@@ -84,14 +102,19 @@ Body physics_new_with_position(float x, float y, float r) {
 // A colection of objects for simulation. //
 ////////////////////////////////////////////
 
-// These are stored as an array allocated on the heap, and the array has to be freed before discarding this struct
+// This is a collection of objects for simulation.
+// The .objects array can be allocated staticly, on the stack, or on the heap
 typedef struct World {
+	// This should be a pointer to .capacity body structs.
 	Body* objects;
-	int size; // How many objects are in the world at the given moment
-	int capacity; // The total amount that can be stored at a given time
+	// How many objects are in the world at the given moment, initalize to 0.
+	int size;
+	// The total amount that can be stored at a given time.
+	int capacity;
 } World;
 
 // Allocate a empty world with a capacity to hold up to capacity objects
+// This allocates .objects on the heap, so make sure to call world_cleanup before discarding the World object.
 World world_with_capacity(int capacity) {
 	World w = {
 		.objects = malloc(capacity * sizeof(Body)),
@@ -101,8 +124,17 @@ World world_with_capacity(int capacity) {
 	return w;
 }
 
-// Add an object to a world, fails if there is no space in the world
-// Returns 1 if sucessfull, zero if not
+// Frees the objects array of a world, call before discarding if it was heap allocated
+void world_cleanup(World* w) {
+	free(w->objects);
+	// Set these to make sure no one tries to access any of the freed datastructures;
+	w->size = 0;
+	w->capacity = 0;
+	w->objects = 0;
+}
+
+// Add an object to a world, fails if there is no space left in the world.
+// Returns 1 if sucessfull, 0 if not.
 int world_insert_object(World* world, Body object) {
 	if (world->capacity > world->size) {
 		world->objects[world->size] = object;
@@ -113,30 +145,23 @@ int world_insert_object(World* world, Body object) {
 	}
 }
 
-// Frees internal datastructures of a world, call this before discarding the structure 
-void world_cleanup(World* w) {
-	free(w->objects);
-	// Set these to make sure no one tries to access any of the freed datastructures;
-	w->size = 0;
-	w->capacity = 0;
-	w->objects = 0;
-}
 
-// Run Verlet integration for the whole world
+// Run Verlet integration for the whole world, call this every timestep
 void world_update_positions(World* w, float dt) {
 	for (int i = 0; i < w->size; i++) {
 		physics_update_position(&w->objects[i], dt);
 	}
 }
 
-// Apply a downwards acceleration to all objects in a world.
+// Apply a downwards acceleration to all objects in a world, this sould also be called every timestep if you want gravity to be applied.
 void world_apply_gravity(World* w, float g) {
 	for (int i = 0; i < w->size; i++) {
 		w->objects[i].acceleration.y -= g;
 	}
 }
 
-// Apply collisions in a world.
+// Apply collisions in a world, this is rather slow, see physics_optimized.h for a faster implementations for large simulations.
+// This should be called every frame if you want objects to collide with each other.
 void world_collide(World* w) {
 	// This is fairly simple, it just finds all intersecting objects and moves them until they no longer intesect.
 	// It is however, rather slow, O(n^2), this should be optimized at some point.
@@ -164,26 +189,21 @@ void world_collide(World* w) {
 }
 
 // Create an object with given position and radius in the world, returns 1 if sucessful, 0 if object max is exeded.
+// This is just shorthand for world_insert_object(world, physics_new_with_position(x, y, r)).
 int world_spawn(World* w, float x, float y, float r) {
 	Body object = physics_new_with_position(x, y, r);
 	return world_insert_object(w, object);
 }
 
-// Runs the simulation for all objects in the world
-// dt: Timestep, this is how much time passes between every step of the simulation
-// g: Acceleration due to gravity.
-void world_step(World* w, float dt, float g) {
-	world_update_positions(w, dt);
-	world_collide(w);
-	world_apply_gravity(w, g);
-}
+///////////////////////////////////////////////////////////
+// Constriants, these should be called once every frame  //
+// There is no magic here, you can implement your own by //
+// simply changing the position of objects so that they  //
+// satisfy the constraint.                               //
+///////////////////////////////////////////////////////////
 
 
-//////////////////////////////////////////////////////////
-// Constriants, these should be called once every frame //
-//////////////////////////////////////////////////////////
-
-// Keep an object within a radius of a point. 
+// Keep an object('s center) within a radius of a point.
 void constrain_distance_from_point(World* w, int objectidx, float x, float y, float maxd) {
 	Vector2* object = &w->objects[objectidx].position;
 	Vector2 origin = {.x = x, .y = y};
@@ -218,6 +238,7 @@ void constrain_distance_between_objects(World* w, int idx1, int idx2, float maxd
 	}
 }
 
+// Keep object('s center) withing a bounding box
 void constrain_bounding_box(World* w, int idx, float minx, float maxx, float miny, float maxy) {
 	Vector2* object = &w->objects[idx].position;
 	if (object->x > maxx) object->x = maxx;
@@ -225,3 +246,5 @@ void constrain_bounding_box(World* w, int idx, float minx, float maxx, float min
 	if (object->x < minx) object->x = minx;
 	if (object->y < miny) object->y = miny;
 }
+
+#endif

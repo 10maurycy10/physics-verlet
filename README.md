@@ -8,7 +8,7 @@ This repository also includes a few simulations with a minimal UI and renderer.
 
 - `stress-test.c` fills a box with objects to test optimizations of the engine.
 
-- `rope.c` Simulates rope made out of descrete particles attached together using constrants. Click to add an object.
+- `rope.c` Simulates rope made out of discrete objects attached together using constraints. Click to add an object.
 
 - `bowl.c` Simulates a bunch of circles bounded inside of a radius around the origin. Click to add an object.
 
@@ -19,9 +19,9 @@ See the comments in the header files for information on usage.
 
 ## Verlet integration
 
-Verlet integration is based on a simple priniciple: Instead of tracking position and velocity, track position and the position at the last timestep.
+Verlet integration is based on a simple principles: Instead of tracking position and velocity, track position and the position at the last timestep.
 The biggest advantage of this is it makes applying constraints and handling collisions super easy.
-For basic inelastic collisions between objects of the same mass, the alogirthm can be sumed up as: If the objects are intersecting, move them away from each other until they are not.
+For basic inelastic collisions between objects of the same mass, the algorithm can be summed up as: If the objects are intersecting, move them away from each other until they are not.
 This is what is implemented in the `physics.h`'s `world_collide` and `physics_optimized.h`'s `world_optimized_collide` functions.
 
 You can also apply other constraints, like limiting objects distances from each other, allowing rope or cloth simulations.
